@@ -178,8 +178,3 @@ sqlsrv_close($conn);
 ?>
 </body>
 </html>
-
-    if (!empty($department)) {
-        $sql .= " AND Department = ?";
-        $params[] = $department;
-    }
