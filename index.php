@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Employee Form - Azure SQL</title>
+    <title>Azure SQL Employee Portal</title>
     <style>
         body {
             font-family: Arial;
@@ -9,7 +9,16 @@
             padding: 30px;
             text-align: center;
         }
-        input, select {
+        .btn {
+            padding: 12px 25px;
+            background-color: #0078D4;
+            color: white;
+            border: none;
+            margin: 10px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        input {
             padding: 10px;
             margin: 10px;
             width: 250px;
@@ -17,7 +26,7 @@
         table {
             border-collapse: collapse;
             width: 80%;
-            margin: 30px auto;
+            margin: 20px auto;
             background: white;
         }
         th, td {
@@ -32,16 +41,16 @@
     </style>
 </head>
 <body>
-    <h1>Add Employee</h1>
+    <h1>Azure SQL Employee Portal</h1>
+
+    <!-- Buttons to trigger actions -->
     <form method="post">
-        <input type="text" name="first_name" placeholder="First Name" required><br>
-        <input type="text" name="last_name" placeholder="Last Name" required><br>
-        <input type="text" name="department" placeholder="Department" required><br>
-        <input type="submit" name="submit" value="Add Employee">
+        <button class="btn" name="show_form" value="1">Add Employee</button>
+        <button class="btn" name="show_list" value="1">Employee List</button>
     </form>
 
 <?php
-// Azure SQL DB connection info
+// Database connection
 $serverName = "tcp:mydemovm.database.windows.net,1433";
 $connectionOptions = array(
     "Database" => "mydemodb",
@@ -57,7 +66,7 @@ if (!$conn) {
     die("<p style='color:red;'>❌ Connection failed: " . print_r(sqlsrv_errors(), true) . "</p>");
 }
 
-// Insert data if form is submitted
+// 1. Insert new employee if form was submitted
 if (isset($_POST['submit'])) {
     $first = $_POST['first_name'];
     $last = $_POST['last_name'];
@@ -74,24 +83,40 @@ if (isset($_POST['submit'])) {
     }
 }
 
-// Show all employees
-$sql = "SELECT EmployeeID, FirstName, LastName, Department FROM Employees";
-$stmt = sqlsrv_query($conn, $sql);
+// 2. Show the employee form
+if (isset($_POST['show_form'])) {
+    echo '
+    <form method="post">
+        <h2>Add New Employee</h2>
+        <input type="text" name="first_name" placeholder="First Name" required><br>
+        <input type="text" name="last_name" placeholder="Last Name" required><br>
+        <input type="text" name="department" placeholder="Department" required><br>
+        <input class="btn" type="submit" name="submit" value="Save">
+    </form>
+    ';
+}
 
-if ($stmt !== false) {
-    echo "<h2>Employee List</h2>";
-    echo "<table>";
-    echo "<tr><th>ID</th><th>First Name</th><th>Last Name</th><th>Department</th></tr>";
-    while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-        echo "<tr>
-                <td>{$row['EmployeeID']}</td>
-                <td>{$row['FirstName']}</td>
-                <td>{$row['LastName']}</td>
-                <td>{$row['Department']}</td>
-              </tr>";
+// 3. Show the employee list (after insert or when requested)
+if (isset($_POST['show_list']) || isset($_POST['submit'])) {
+    $sql = "SELECT EmployeeID, FirstName, LastName, Department FROM Employees";
+    $stmt = sqlsrv_query($conn, $sql);
+
+    if ($stmt !== false) {
+        echo "<h2>Employee List</h2>";
+        echo "<table>";
+        echo "<tr><th>ID</th><th>First Name</th><th>Last Name</th><th>Department</th></tr>";
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            echo "<tr>
+                    <td>{$row['EmployeeID']}</td>
+                    <td>{$row['FirstName']}</td>
+                    <td>{$row['LastName']}</td>
+                    <td>{$row['Department']}</td>
+                  </tr>";
+        }
+        echo "</table>";
+    } else {
+        echo "<p style='color:red;'>❌ Query failed: " . print_r(sqlsrv_errors(), true) . "</p>";
     }
-    echo "</table>";
-    sqlsrv_free_stmt($stmt);
 }
 
 sqlsrv_close($conn);
