@@ -43,14 +43,14 @@
 <body>
     <h1>Azure SQL Employee Portal</h1>
 
-    <!-- Buttons to trigger actions -->
+    <!-- Buttons -->
     <form method="post">
         <button class="btn" name="show_form" value="1">Add Employee</button>
         <button class="btn" name="show_list" value="1">Employee List</button>
     </form>
 
 <?php
-// Database connection
+// DB Connection
 $serverName = "tcp:mydemovm.database.windows.net,1433";
 $connectionOptions = array(
     "Database" => "mydemodb",
@@ -61,29 +61,32 @@ $connectionOptions = array(
 );
 
 $conn = sqlsrv_connect($serverName, $connectionOptions);
-
 if (!$conn) {
     die("<p style='color:red;'>❌ Connection failed: " . print_r(sqlsrv_errors(), true) . "</p>");
 }
 
-// 1. Insert new employee if form was submitted
+// 1. Handle Delete
+if (isset($_POST['delete_btn']) && isset($_POST['delete_id'])) {
+    $deleteId = $_POST['delete_id'];
+    $deleteQuery = "DELETE FROM Employees WHERE EmployeeID = ?";
+    $stmt = sqlsrv_query($conn, $deleteQuery, array($deleteId));
+    echo $stmt ? "<p style='color:green;'>✅ Deleted Employee ID $deleteId</p>"
+               : "<p style='color:red;'>❌ Delete failed: " . print_r(sqlsrv_errors(), true) . "</p>";
+}
+
+// 2. Handle Insert
 if (isset($_POST['submit'])) {
     $first = $_POST['first_name'];
     $last = $_POST['last_name'];
     $dept = $_POST['department'];
-
     $insert = "INSERT INTO Employees (FirstName, LastName, Department) VALUES (?, ?, ?)";
     $params = array($first, $last, $dept);
     $stmt = sqlsrv_query($conn, $insert, $params);
-
-    if ($stmt === false) {
-        echo "<p style='color:red;'>❌ Insert failed: " . print_r(sqlsrv_errors(), true) . "</p>";
-    } else {
-        echo "<p style='color:green;'>✅ Employee added successfully!</p>";
-    }
+    echo $stmt ? "<p style='color:green;'>✅ Employee added successfully!</p>"
+               : "<p style='color:red;'>❌ Insert failed: " . print_r(sqlsrv_errors(), true) . "</p>";
 }
 
-// 2. Show the employee form
+// 3. Show Add Form
 if (isset($_POST['show_form'])) {
     echo '
     <form method="post">
@@ -92,34 +95,31 @@ if (isset($_POST['show_form'])) {
         <input type="text" name="last_name" placeholder="Last Name" required><br>
         <input type="text" name="department" placeholder="Department" required><br>
         <input class="btn" type="submit" name="submit" value="Save">
-    </form>
-    ';
+    </form>';
 }
 
-// 3. Show the employee list (after insert or when requested)
-if (isset($_POST['show_list']) || isset($_POST['submit'])) {
-    $sql = "SELECT EmployeeID, FirstName, LastName, Department FROM Employees";
-    $stmt = sqlsrv_query($conn, $sql);
+// 4. Show Search Form
+echo '
+<form method="post">
+    <h2>Search Employees</h2>
+    <input type="text" name="search_lastname" placeholder="Last Name (e.g., Pat%)">
+    <input type="text" name="search_department" placeholder="Department (optional)">
+    <input class="btn" type="submit" name="search_btn" value="Search">
+</form>';
 
-    if ($stmt !== false) {
-        echo "<h2>Employee List</h2>";
-        echo "<table>";
-        echo "<tr><th>ID</th><th>First Name</th><th>Last Name</th><th>Department</th></tr>";
-        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-            echo "<tr>
-                    <td>{$row['EmployeeID']}</td>
-                    <td>{$row['FirstName']}</td>
-                    <td>{$row['LastName']}</td>
-                    <td>{$row['Department']}</td>
-                  </tr>";
-        }
-        echo "</table>";
-    } else {
-        echo "<p style='color:red;'>❌ Query failed: " . print_r(sqlsrv_errors(), true) . "</p>";
+// 5. Handle Search
+if (isset($_POST['search_btn'])) {
+    $lastname = $_POST['search_lastname'] ?? '';
+    $department = $_POST['search_department'] ?? '';
+
+    $sql = "SELECT EmployeeID, FirstName, LastName, Department FROM Employees WHERE 1=1";
+    $params = [];
+
+    if (!empty($lastname)) {
+        $sql .= " AND LastName LIKE ?";
+        $params[] = $lastname;
     }
-}
-
-sqlsrv_close($conn);
-?>
-</body>
-</html>
+    if (!empty($department)) {
+        $sql .= " AND Department = ?";
+        $params[] = $department;
+    }
