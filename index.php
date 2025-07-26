@@ -119,6 +119,66 @@ if (isset($_POST['search_btn'])) {
         $sql .= " AND LastName LIKE ?";
         $params[] = $lastname;
     }
+
+        $stmt = sqlsrv_query($conn, $sql, $params);
+    if ($stmt !== false) {
+        echo "<h2>Search Results</h2><table><tr><th>ID</th><th>First</th><th>Last</th><th>Department</th><th>Action</th></tr>";
+        $found = false;
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            $found = true;
+            echo "<tr>
+                    <td>{$row['EmployeeID']}</td>
+                    <td>{$row['FirstName']}</td>
+                    <td>{$row['LastName']}</td>
+                    <td>{$row['Department']}</td>
+                    <td>
+                        <form method='post' style='display:inline;'>
+                            <input type='hidden' name='delete_id' value='{$row['EmployeeID']}'>
+                            <button class='btn' style='background-color:red;' type='submit' name='delete_btn'>Delete</button>
+                        </form>
+                    </td>
+                  </tr>";
+        }
+        echo "</table>";
+        if (!$found) {
+            echo "<p style='color:orange;'>No matching employees found.</p>";
+        }
+    } else {
+        echo "<p style='color:red;'>❌ Search failed: " . print_r(sqlsrv_errors(), true) . "</p>";
+    }
+}
+
+// 6. Show Full List
+if (isset($_POST['show_list']) || isset($_POST['submit']) || isset($_POST['delete_btn'])) {
+    $sql = "SELECT EmployeeID, FirstName, LastName, Department FROM Employees";
+    $stmt = sqlsrv_query($conn, $sql);
+    if ($stmt !== false) {
+        echo "<h2>Employee List</h2><table><tr><th>ID</th><th>First</th><th>Last</th><th>Department</th><th>Action</th></tr>";
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+            echo "<tr>
+                    <td>{$row['EmployeeID']}</td>
+                    <td>{$row['FirstName']}</td>
+                    <td>{$row['LastName']}</td>
+                    <td>{$row['Department']}</td>
+                    <td>
+                        <form method='post' style='display:inline;'>
+                            <input type='hidden' name='delete_id' value='{$row['EmployeeID']}'>
+                            <button class='btn' style='background-color:red;' type='submit' name='delete_btn'>Delete</button>
+                        </form>
+                    </td>
+                  </tr>";
+        }
+        echo "</table>";
+    } else {
+        echo "<p style='color:red;'>❌ List fetch failed: " . print_r(sqlsrv_errors(), true) . "</p>";
+    }
+}
+
+sqlsrv_close($conn);
+?>
+</body>
+</html>
+
     if (!empty($department)) {
         $sql .= " AND Department = ?";
         $params[] = $department;
